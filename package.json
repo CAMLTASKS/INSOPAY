@@ -1,0 +1,30 @@
+{
+  "name": "openpay-colombia-qr-service",
+  "version": "1.0.0",
+  "description": "Servicio Node.js y Angular para generación y consulta de pagos QR con Openpay Colombia",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "generate-qr": "node scripts/generate-qr-cli.js",
+    "test": "node scripts/test-server.js"
+  },
+  "keywords": [
+    "openpay",
+    "qr",
+    "colombia",
+    "pse",
+    "payment",
+    "node",
+    "angular"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4"
+  }
+}

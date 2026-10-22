@@ -1,0 +1,110 @@
+<div class="qr-container">
+  <!-- Cabecera -->
+  <div class="qr-header">
+    <h3>Cobro con Código QR</h3>
+    <span class="currency-tag">Openpay Colombia</span>
+  </div>
+
+  <!-- Formulario si no hay QR generado -->
+  <div *ngIf="!charge" class="qr-form-section">
+    <div class="field-group">
+      <label for="compAmount">Valor a Cobrar (COP):</label>
+      <div class="amount-input-box">
+        <span class="symbol">$</span>
+        <input 
+          id="compAmount" 
+          type="number" 
+          [(ngModel)]="amount" 
+          min="1000" 
+          step="100" 
+          placeholder="Monto"
+        />
+        <span class="tag">COP</span>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label for="compDesc">Descripción:</label>
+      <input 
+        id="compDesc" 
+        type="text" 
+        [(ngModel)]="description" 
+        placeholder="Concepto de pago"
+      />
+    </div>
+
+    <button 
+      class="btn-generate" 
+      [disabled]="isLoading" 
+      (click)="generateQr()"
+    >
+      <span *ngIf="!isLoading">⚡ Generar Código QR</span>
+      <span *ngIf="isLoading">⏳ Conectando con Openpay...</span>
+    </button>
+
+    <div *ngIf="errorMessage" class="error-alert">
+      {{ errorMessage }}
+    </div>
+  </div>
+
+  <!-- Vista del QR Generado -->
+  <div *ngIf="charge" class="qr-display-section">
+    <!-- Status Badge -->
+    <div class="status-indicator" [ngClass]="charge.status">
+      <span *ngIf="charge.status === 'charge_pending'">⏳ PENDIENTE DE PAGO</span>
+      <span *ngIf="charge.status === 'completed'">✅ PAGO COMPLETADO</span>
+      <span *ngIf="charge.status === 'cancelled'">❌ QR EXPIRADO</span>
+      <span *ngIf="charge.status === 'failed'">⚠️ PAGO FALLIDO</span>
+    </div>
+
+    <!-- Temporizador de 10 minutos (Regla Openpay) -->
+    <div *ngIf="charge.status === 'charge_pending'" class="timer-card">
+      <div class="timer-top">
+        <span>⏱️ Expira en:</span>
+        <span class="clock">{{ timerString }}</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" [style.width.%]="progressPercent"></div>
+      </div>
+      <small>Válido por 10 minutos según normativa Openpay</small>
+    </div>
+
+    <!-- Imagen QR -->
+    <div class="qr-box">
+      <img 
+        *ngIf="charge.payment_method?.barcode_base64" 
+        [src]="'data:image/png;base64,' + charge.payment_method.barcode_base64" 
+        alt="QR de Pago Openpay" 
+        width="260" 
+        height="260"
+      />
+      <div class="price-badge">
+        ${{ charge.amount | number:'1.0-0' }} COP
+      </div>
+    </div>
+
+    <!-- Instrucciones -->
+    <p class="instructions">
+      Escanea con la app de tu entidad financiera (Bancolombia, Nequi, Daviplata, etc.)
+    </p>
+
+    <!-- Transacción -->
+    <div class="tx-info">
+      <div><span>ID:</span> <code>{{ charge.id }}</code></div>
+      <div><span>Orden:</span> <span>{{ charge.order_id || 'N/A' }}</span></div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="action-buttons">
+      <button class="btn-outline" (click)="checkStatusManually()">
+        🔄 Consultar Estado
+      </button>
+      <button class="btn-success" *ngIf="charge.status === 'charge_pending'" (click)="simulateSuccess()">
+        💳 Simular Pago Exitoso
+      </button>
+      <button class="btn-new" (click)="charge = null">
+        ➕ Nuevo Cobro
+      </button>
+    </div>
+  </div>
+</div>
