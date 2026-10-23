@@ -3,280 +3,788 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Openpay Colombia - Generador de Pagos QR</title>
+  <title>PayHub Colombia - Factus Pay (Bre-B) & Openpay</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Librería para escanear QR con la cámara web o del móvil -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body>
-  <header class="navbar">
-    <div class="container navbar-content">
-      <div class="logo-area">
-        <div class="logo-icon">QR</div>
-        <div>
-          <h1>Openpay Colombia</h1>
-          <span class="subtitle">Servicio de Cobro con Código QR Dinámico</span>
+  <!-- BARRA DE NAVEGACIÓN SUPERIOR (TOP NAVBAR) -->
+  <header class="top-navbar">
+    <div class="container nav-container">
+      <div class="nav-brand">
+        <div class="brand-logo">🇨🇴</div>
+        <div class="brand-info">
+          <span class="brand-name">PayHub Colombia</span>
+          <span class="brand-tag">Integración Factus Pay & Openpay</span>
         </div>
       </div>
-      <div class="env-badge" id="envBadge">
-        <span class="dot"></span>
-        <span id="envText">Sandbox CO</span>
+
+      <!-- Módulos Principales -->
+      <nav class="main-nav-tabs">
+        <button class="nav-btn active" data-module="module-factus" id="tabBtnFactus">
+          <span class="nav-icon">⚡</span>
+          <span class="nav-label">Módulo Factus Pay</span>
+          <span class="nav-pill-breb">Bre-B</span>
+        </button>
+        <button class="nav-btn" data-module="module-direct" id="tabBtnDirect">
+          <span class="nav-icon">💸</span>
+          <span class="nav-label">Directo Celular</span>
+        </button>
+        <button class="nav-btn" data-module="module-openpay" id="tabBtnOpenpay">
+          <span class="nav-icon">🏦</span>
+          <span class="nav-label">Openpay Colombia</span>
+        </button>
+        <button class="nav-btn" data-module="module-webhooks" id="tabBtnWebhooks">
+          <span class="nav-icon">📡</span>
+          <span class="nav-label">Webhooks en Vivo</span>
+          <span class="badge-count" id="navWebhooksCount">0</span>
+        </button>
+      </nav>
+
+      <!-- Estado de la API -->
+      <div class="nav-status">
+        <div class="env-pill online" id="globalEnvPill">
+          <span class="dot-live"></span>
+          <span id="globalEnvText">SANDBOX ACTIVO</span>
+        </div>
       </div>
     </div>
   </header>
 
-  <main class="container main-content">
-    <!-- Panel Izquierdo: Formulario de Cobro -->
-    <section class="card form-card">
-      <div class="card-header">
-        <h2>1. Datos del Cobro</h2>
-        <p class="card-desc">Ingresa el valor a cobrar en Pesos Colombianos (COP).</p>
+  <main class="container page-content">
+    <!-- ============================================================ -->
+    <!-- MÓDULO 1: FACTUS PAY (BRE-B COLOMBIA)                       -->
+    <!-- ============================================================ -->
+    <section class="module-section active" id="module-factus">
+      <!-- Sub-navegación del Módulo Factus -->
+      <div class="module-header-card">
+        <div class="module-intro">
+          <div class="badge-tag">Oficial Factus Pay API</div>
+          <h2>⚡ Factus Pay: Red Interoperable Bre-B Colombia</h2>
+          <p>Genera recaudos con QR interoperable con cualquier banco de Colombia, consulta pagos en tiempo real, audita historial y simula transacciones.</p>
+        </div>
+
+        <nav class="sub-nav-bar">
+          <button class="sub-nav-btn active" data-subtab="factus-create">
+            <span>➕ Generar Recaudo</span>
+          </button>
+          <button class="sub-nav-btn" data-subtab="factus-history" id="subtabBtnHistory">
+            <span>📋 Historial de Pagos</span>
+            <span class="badge-count" id="factusHistoryCount">0</span>
+          </button>
+          <button class="sub-nav-btn" data-subtab="factus-verify">
+            <span>🔍 Verificar Estado</span>
+          </button>
+          <button class="sub-nav-btn" data-subtab="factus-simulate">
+            <span>🧪 Simulador Sandbox</span>
+          </button>
+          <button class="sub-nav-btn" data-subtab="factus-diagnostics">
+            <span>⚙️ Diagnóstico & Conexión</span>
+          </button>
+        </nav>
       </div>
 
-      <form id="qrForm">
-        <div class="form-group amount-group">
-          <label for="amount">Monto a Cobrar (COP) <span class="required">*</span></label>
-          <div class="input-currency">
-            <span class="currency-symbol">$</span>
-            <input 
-              type="number" 
-              id="amount" 
-              name="amount" 
-              placeholder="50000" 
-              min="1000" 
-              step="100" 
-              required
-              value="25000"
-            >
-            <span class="currency-tag">COP</span>
-          </div>
-          <small class="helper-text">Valor entero sin decimales (mínimo $1.000 COP)</small>
-        </div>
-
-        <div class="quick-amounts">
-          <button type="button" class="btn-quick" data-val="10000">$10.000</button>
-          <button type="button" class="btn-quick" data-val="25000">$25.000</button>
-          <button type="button" class="btn-quick" data-val="50000">$50.000</button>
-          <button type="button" class="btn-quick" data-val="100000">$100.000</button>
-        </div>
-
-        <div class="form-group">
-          <label for="qrFormat">Modalidad de Código QR:</label>
-          <select id="qrFormat" class="select-format">
-            <option value="direct_phone" selected>💸 Modo 3: QR Directo a Celular (Nequi / Bancolombia al 3503752816 - Sin Openpay)</option>
-            <option value="emv">🏦 Modo 2: QR Bancario EMVCo (Estándar Redeban Colombia)</option>
-            <option value="webcheckout">🌐 Modo 1: Webcheckout Oficial Openpay (PSE / Tarjeta)</option>
-            <option value="url">📱 Modo 1 Alternativo: Checkout Móvil Local</option>
-          </select>
-          <small class="helper-text" id="formatHelpText">Envía el dinero directamente a tu cuenta Nequi o Bancolombia (3503752816) con el monto precargado, sin intermediación de Openpay.</small>
-        </div>
-
-        <!-- Sección de configuración de pago directo a celular -->
-        <div class="direct-phone-box" id="directPhoneBox">
-          <div class="section-title"><span>Destino del Dinero (Sin comisiones)</span></div>
-          <div class="grid-2">
-            <div class="form-group">
-              <label for="destPhone">Celular Receptor (Nequi/Bancolombia):</label>
-              <input type="tel" id="destPhone" value="3503752816" placeholder="3503752816" maxlength="10">
+      <!-- SUBTAB 1.1: GENERAR RECAUDO -->
+      <div class="subtab-panel active" id="factus-create">
+        <div class="grid-2-col">
+          <!-- Formulario de Cobro -->
+          <div class="card">
+            <div class="card-title-row">
+              <h3>1. Crear Recaudo Bre-B</h3>
+              <span class="card-badge">POST /v1/collections</span>
             </div>
-            <div class="form-group">
-              <label for="destEntity">Billetera / Entidad Bancaria:</label>
-              <select id="destEntity" class="select-format" style="padding:10px;">
-                <option value="CAJA_SOCIAL" selected>🏦 Banco Caja Social (Código 1032 / Bre-B)</option>
-                <option value="NEQUI">📱 Nequi (+57)</option>
-                <option value="BANCOLOMBIA">🟡 Bancolombia</option>
-                <option value="DAVIPLATA">🔴 Daviplata</option>
-                <option value="DAVIVIENDA">🏛️ Davivienda</option>
-                <option value="BBVA">🔵 BBVA Colombia</option>
-                <option value="BANCO_BOGOTA">🏛️ Banco de Bogotá</option>
-                <option value="COLPATRIA">🔴 Scotiabank Colpatria</option>
-                <option value="AV_VILLAS">🏛️ Banco AV Villas</option>
-                <option value="DALE">🟡 Dale!</option>
-                <option value="BRE_B">🇨🇴 Bre-B Interoperable (Universal)</option>
-              </select>
+            <p class="card-subtitle">Ingresa el valor en pesos colombianos para generar el código QR con su respectiva llave Bre-B.</p>
+
+            <form id="factusCreateForm">
+              <div class="form-group">
+                <label for="factusAmount">Monto a Cobrar (COP) <span class="required">*</span></label>
+                <div class="input-currency">
+                  <span class="currency-prefix">$</span>
+                  <input type="number" id="factusAmount" value="25000" min="1000" max="12100000" step="100" required>
+                  <span class="currency-tag">COP</span>
+                </div>
+                <small class="helper-text">Rango permitido: $1.000 a $12.100.000 COP</small>
+              </div>
+
+              <div class="quick-chips">
+                <button type="button" class="chip" data-amt="10000">$10.000</button>
+                <button type="button" class="chip" data-amt="25000">$25.000</button>
+                <button type="button" class="chip" data-amt="50000">$50.000</button>
+                <button type="button" class="chip" data-amt="100000">$100.000</button>
+                <button type="button" class="chip" data-amt="250000">$250.000</button>
+              </div>
+
+              <div class="form-group">
+                <label for="factusDescription">Concepto o Descripción</label>
+                <input type="text" id="factusDescription" value="Pago de servicio Conecta Hogar" placeholder="Ej. Pago servicio Conecta Hogar">
+              </div>
+
+              <div class="form-group">
+                <label for="factusCustomRef">Código de Referencia Personalizado (Opcional)</label>
+                <input type="text" id="factusCustomRef" placeholder="Dejar vacío para generar automático (FACTUS-...)">
+                <small class="helper-text">Identificador único del recaudo en tu sistema</small>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block" id="btnFactusSubmit">
+                <span class="btn-icon">⚡</span>
+                <span id="btnFactusText">Generar Código QR Factus Pay</span>
+              </button>
+            </form>
+
+            <div class="credential-box-compact">
+              <div class="cred-row">
+                <span>Cuenta:</span>
+                <strong>servicios@conectahogar.co</strong>
+              </div>
+              <div class="cred-row">
+                <span>Ambiente:</span>
+                <span class="badge-env">Sandbox Factus Pay</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="form-group">
-          <label for="description">Concepto o Descripción</label>
-          <input 
-            type="text" 
-            id="description" 
-            name="description" 
-            placeholder="Ej: Pago de pedido #1234"
-            value="Pago de pedido en línea"
-            maxlength="250"
-          >
-        </div>
+          <!-- Resultado / QR Generado -->
+          <div class="card qr-display-card">
+            <div class="card-title-row">
+              <h3>2. Código QR y Llave Bre-B</h3>
+              <div class="status-badge status-waiting" id="factusStatusBadge">Esperando datos...</div>
+            </div>
 
-        <div class="collapsible-section">
-          <div class="section-title">
-            <span>Datos del Cliente (Opcional)</span>
+            <!-- Estado Vacío -->
+            <div class="empty-state" id="factusEmptyState">
+              <div class="empty-icon">📱</div>
+              <h4>Listo para Generar</h4>
+              <p>Diligencia el monto a la izquierda y presiona "Generar Código QR Factus Pay".</p>
+            </div>
+
+            <!-- Estado Activo con QR -->
+            <div class="qr-active-state hidden" id="factusActiveState">
+              <!-- Contador de Vigencia -->
+              <div class="timer-card">
+                <div class="timer-top">
+                  <span>⏱️ Vigencia del Recaudo:</span>
+                  <span class="timer-time" id="factusTimerClock">24 horas</span>
+                </div>
+                <div class="timer-bar"><div class="timer-fill" style="width: 100%;"></div></div>
+                <small class="timer-note">Válido para escanear en cualquier banco o billetera compatible con Bre-B.</small>
+              </div>
+
+              <!-- Imagen QR -->
+              <div class="qr-box">
+                <img id="factusQrImg" src="" alt="Código QR Bre-B Factus Pay">
+                <div class="qr-pill-amount" id="factusQrAmount">$25.000 COP</div>
+              </div>
+
+              <!-- Metadatos del Recaudo -->
+              <div class="meta-table">
+                <div class="meta-row">
+                  <span class="meta-label">Llave Bre-B:</span>
+                  <div class="meta-val-copy">
+                    <code class="code-key" id="factusBrebKey">-</code>
+                    <button type="button" class="btn-copy" id="btnCopyBrebKey" title="Copiar llave Bre-B">📋 Copiar</button>
+                  </div>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">Referencia:</span>
+                  <code class="code-ref" id="factusRefCode">-</code>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">Estado Actual:</span>
+                  <span class="status-pill status-ready" id="factusStatusText">ready</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">Fecha Creación:</span>
+                  <span id="factusCreatedAtText">-</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">Fecha Expiración:</span>
+                  <span id="factusExpiresAtText">-</span>
+                </div>
+              </div>
+
+              <!-- Banner de Código Escaneado (started) -->
+              <div class="scanned-banner hidden" id="factusScannedBanner">
+                <span class="banner-icon">📱</span>
+                <div>
+                  <strong>¡CÓDIGO QR ESCANEADO POR EL PAGADOR!</strong>
+                  <p>El cliente abrió el código desde su aplicación bancaria (Bre-B). Esperando que autorice y confirme el pago...</p>
+                </div>
+              </div>
+
+              <!-- Banner de Pago Confirmado (paid) -->
+              <div class="paid-banner hidden" id="factusPaidBanner">
+                <span class="banner-icon">🎉</span>
+                <div>
+                  <strong>¡PAGO CONFIRMADO CON ÉXITO!</strong>
+                  <p id="factusPaidPayerText">Transacción aprobada en la red Bre-B / Factus Pay.</p>
+                </div>
+              </div>
+
+              <!-- Sondeo automático -->
+              <div class="polling-box" id="factusPollingBox">
+                <span class="dot-pulse"></span>
+                <span id="factusPollingStatus">Escuchando eventos en tiempo real (SSE & Webhooks)...</span>
+              </div>
+
+              <!-- Botones de Acción y Pruebas Rápidas -->
+              <div class="action-grid">
+                <button type="button" class="btn btn-outline" id="btnFactusDownloadQr">💾 Descargar QR</button>
+                <button type="button" class="btn btn-outline" id="btnFactusQueryStatus">🔄 Consultar Estado</button>
+                <button type="button" class="btn btn-outline" id="btnOpenScannerModal">📷 Escanear con Cámara</button>
+                <a href="https://pay-api-sandbox.factus.com.co/simulator" target="_blank" rel="noopener" class="btn btn-outline" style="text-decoration:none; display:flex; align-items:center; justify-content:center;">🌐 Simulador Factus</a>
+                <button type="button" class="btn btn-primary" id="btnSimulateScanQuick" style="background:#0284c7;">📱 Simular Escaneo (started)</button>
+                <button type="button" class="btn btn-success" id="btnSimulatePayQuick" style="background:#16a34a; color:#fff;">✅ Simular Pago (paid)</button>
+              </div>
+            </div>
           </div>
-          <div class="grid-2">
-            <div class="form-group">
-              <label for="custName">Nombre</label>
-              <input type="text" id="custName" value="Carlos" placeholder="Nombre">
+        </div>
+      </div>
+
+      <!-- SUBTAB 1.2: HISTORIAL DE PAGOS (COLLECTIONS) -->
+      <div class="subtab-panel" id="factus-history">
+        <div class="card">
+          <!-- Estadísticas Superiores -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span class="metric-label">Total Recaudos</span>
+              <span class="metric-value" id="metricTotalCollections">0</span>
             </div>
-            <div class="form-group">
-              <label for="custLastName">Apellido</label>
-              <input type="text" id="custLastName" value="Maldonado" placeholder="Apellido">
+            <div class="metric-card">
+              <span class="metric-label">Total en Pesos (COP)</span>
+              <span class="metric-value text-primary" id="metricTotalAmount">$0</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Pagados Exitosos</span>
+              <span class="metric-value text-success" id="metricPaidCollections">0</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">En Espera (Ready)</span>
+              <span class="metric-value text-warning" id="metricReadyCollections">0</span>
             </div>
           </div>
-          <div class="grid-2">
-            <div class="form-group">
-              <label for="custEmail">Correo Electrónico</label>
-              <input type="email" id="custEmail" value="carlos@ejemplo.com" placeholder="correo@ejemplo.com">
+
+          <!-- Barra de Filtros y Búsqueda -->
+          <div class="table-header-toolbar">
+            <div class="filters-wrap">
+              <div class="filter-group">
+                <label>Filtrar por Estado:</label>
+                <select id="factusFilterStatus" class="select-sm">
+                  <option value="all">Todos los Estados</option>
+                  <option value="ready">Ready (En espera de pago)</option>
+                  <option value="started">Started (Iniciado en banco)</option>
+                  <option value="paid">Paid (Pagado)</option>
+                  <option value="rejected">Rejected (Rechazado)</option>
+                  <option value="failed">Failed (Fallido)</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>Búsqueda:</label>
+                <input type="text" id="factusSearchQuery" class="input-sm" placeholder="Buscar por referencia o Bre-B...">
+              </div>
+              <button type="button" class="btn btn-sm btn-primary" id="btnFactusSearch">Buscar</button>
+              <button type="button" class="btn btn-sm btn-outline" id="btnFactusRefreshHistory">🔄 Refrescar Lista</button>
             </div>
-            <div class="form-group">
-              <label for="custPhone">Teléfono Móvil</label>
-              <input type="tel" id="custPhone" value="3001234567" placeholder="3001234567">
+          </div>
+
+          <!-- Tabla de Recaudos -->
+          <div class="table-responsive">
+            <table class="styled-table" id="tableCollections">
+              <thead>
+                <tr>
+                  <th>Referencia</th>
+                  <th>Monto (COP)</th>
+                  <th>Llave Bre-B</th>
+                  <th>Fecha de Creación</th>
+                  <th>Estado</th>
+                  <th class="text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tableCollectionsBody">
+                <tr>
+                  <td colspan="6" class="text-center py-4">Cargando recaudos desde Factus Pay...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Paginación -->
+          <div class="pagination-footer">
+            <button type="button" class="btn btn-sm btn-outline" id="btnFactusPrevPage" disabled>« Anterior</button>
+            <span class="page-indicator" id="factusPageIndicator">Página 1 de 1</span>
+            <button type="button" class="btn btn-sm btn-outline" id="btnFactusNextPage" disabled>Siguiente »</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBTAB 1.3: VERIFICAR ESTADO -->
+      <div class="subtab-panel" id="factus-verify">
+        <div class="card max-w-750 mx-auto">
+          <div class="card-title-row">
+            <h3>🔍 Verificador de Estado en Tiempo Real</h3>
+            <span class="card-badge">GET /v1/collections/:referenceCode</span>
+          </div>
+          <p class="card-subtitle">Consulta de forma inmediata el estado y los metadatos de cualquier recaudo registrado en Factus Pay.</p>
+
+          <form id="factusVerifyForm" class="search-form-row">
+            <input type="text" id="verifyRefCodeInput" placeholder="Ej: FACTUS-1792787597621" required>
+            <button type="submit" class="btn btn-primary" id="btnVerifySubmit">
+              <span>🔍 Consultar Estado</span>
+            </button>
+          </form>
+
+          <!-- Resultado de Consulta -->
+          <div class="verify-result-card hidden" id="verifyResultCard">
+            <div class="verify-top">
+              <div>
+                <span class="status-pill" id="verifyStatusPill">ready</span>
+                <h4 id="verifyRefTitle" class="mt-2">-</h4>
+              </div>
+              <div class="verify-amount" id="verifyAmountDisplay">$0 COP</div>
+            </div>
+
+            <div class="grid-2-col mt-3">
+              <div class="meta-table">
+                <div class="meta-row">
+                  <span class="meta-label">Llave Bre-B:</span>
+                  <code class="code-key" id="verifyBrebKey">-</code>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">Fecha Creación:</span>
+                  <span id="verifyCreatedAt">-</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">Fecha Expiración:</span>
+                  <span id="verifyExpiresAt">-</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">Ambiente:</span>
+                  <span>Sandbox Factus Pay</span>
+                </div>
+              </div>
+
+              <div class="verify-qr-box">
+                <img id="verifyQrImg" src="" alt="QR Verificado" class="hidden">
+                <span class="text-muted text-sm" id="verifyQrEmpty">QR no disponible o expirado</span>
+              </div>
+            </div>
+
+            <!-- Visor JSON de la respuesta -->
+            <details class="json-details mt-3">
+              <summary>Ver JSON Crudo de la Respuesta de Factus Pay</summary>
+              <pre class="json-pre" id="verifyRawJson">{}</pre>
+            </details>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBTAB 1.4: SIMULADOR SANDBOX -->
+      <div class="subtab-panel" id="factus-simulate">
+        <div class="grid-2-col">
+          <div class="card">
+            <div class="card-title-row">
+              <h3>🧪 Simulador de Pagos Sandbox</h3>
+              <span class="card-badge bg-warning">Pruebas Oficiales</span>
+            </div>
+            <p class="card-subtitle">Factus Pay permite validar el ciclo completo simulando los diferentes escenarios de respuesta de la red Bre-B sin dinero real.</p>
+
+            <form id="factusSimulateForm">
+              <div class="form-group">
+                <label for="simRefCode">Código de Referencia del Recaudo <span class="required">*</span></label>
+                <input type="text" id="simRefCode" placeholder="Ej: FACTUS-1792787597621" required>
+                <small class="helper-text">Puedes usar uno recién creado o seleccionarlo del historial</small>
+              </div>
+
+              <div class="form-group">
+                <label for="simAmount">Monto de la Transacción (COP)</label>
+                <input type="number" id="simAmount" value="25000">
+              </div>
+
+              <div class="form-group">
+                <label for="simScenario">Escenario a Simular <span class="required">*</span></label>
+                <select id="simScenario" class="select-format">
+                  <option value="started">📱 Escaneo del Código QR (started - Pagador abrió su app y escaneó)</option>
+                  <option value="paid" selected>✅ Pago Exitoso (paid) - Transacción aprobada</option>
+                  <option value="tx_insufficient_funds">❌ Saldo Insuficiente (tx_insufficient_funds -> rejected)</option>
+                  <option value="tx_account_error">⚠️ Error de Cuenta (tx_account_error -> failed)</option>
+                  <option value="tx_timeout">⏳ Tiempo de Espera Agotado (tx_timeout -> failed)</option>
+                </select>
+                <small class="helper-text">Escenarios definidos en la documentación técnica de Factus Pay</small>
+              </div>
+
+              <button type="submit" class="btn btn-warning btn-block" id="btnSimulateSubmit">
+                <span>🚀 Ejecutar Simulación y Disparar Webhook</span>
+              </button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h3>Resultado de la Simulación</h3>
+            <p class="card-subtitle">Respuesta inmediata y payload que tu backend procesará.</p>
+
+            <div class="simulation-output-box" id="simulationOutputBox">
+              <div class="empty-state">
+                <div class="empty-icon">🧪</div>
+                <p>Selecciona un escenario y presiona "Ejecutar Simulación".</p>
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <button type="submit" class="btn btn-primary" id="btnGenerate">
-          <span class="btn-icon">⚡</span>
-          <span>Generar Código QR de Pago</span>
-        </button>
-      </form>
+      <!-- SUBTAB 1.5: DIAGNÓSTICO & CONEXIÓN -->
+      <div class="subtab-panel" id="factus-diagnostics">
+        <div class="grid-2-col">
+          <div class="card">
+            <div class="card-title-row">
+              <h3>Conectividad & Credenciales Factus Pay</h3>
+              <button type="button" class="btn btn-sm btn-outline" id="btnPingFactus">🔄 Test Latencia</button>
+            </div>
 
-      <div class="credentials-box">
-        <div class="cred-item">
-          <span class="cred-label">Merchant ID:</span>
-          <span class="cred-val" id="merchantIdDisplay">mmihmqoqpbfcobqezvs6</span>
-        </div>
-        <div class="cred-item">
-          <span class="cred-label">Pasarela:</span>
-          <span class="cred-val">REDEBAN / Openpay CO</span>
+            <div class="meta-table mt-3">
+              <div class="meta-row">
+                <span class="meta-label">Proveedor:</span>
+                <strong>Factus Pay (Bre-B Interoperable)</strong>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">Correo de Autenticación:</span>
+                <code>servicios@conectahogar.co</code>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">Ambiente Activo:</span>
+                <span class="badge-env">Sandbox</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">Endpoint Base:</span>
+                <code>https://pay-api-sandbox.factus.com.co</code>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">Límites de Monto:</span>
+                <span>$1.000 COP a $12.100.000 COP</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">Token Bearer:</span>
+                <span class="text-success font-bold" id="diagTokenStatus">Válido en memoria (Renovación automática)</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">Latencia Ping:</span>
+                <span id="diagLatencyText">Verificando...</span>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <h4>Portal Oficial de Documentación:</h4>
+              <a href="https://pay-developers.factus.com.co/" target="_blank" rel="noopener" class="external-link">
+                🔗 https://pay-developers.factus.com.co
+              </a>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title-row">
+              <h3>📡 Configuración Oficial del Webhook</h3>
+              <span class="card-badge bg-warning">Recomendado</span>
+            </div>
+            <p class="card-subtitle">Registra estos datos en tu <strong>Panel de Factus Pay &gt; Sección Webhook</strong> para recibir confirmaciones de pago automáticas en tiempo real:</p>
+
+            <div class="meta-table">
+              <div class="meta-row">
+                <span class="meta-label">1. URL del Webhook:</span>
+                <div class="meta-val-copy">
+                  <code class="code-ref" id="webhookCleanUrl">http://localhost:3000/api/factus/webhook</code>
+                  <button type="button" class="btn-copy" id="btnCopyWebhookCleanUrl">Copiar</button>
+                </div>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">2. Llave Secreta (key):</span>
+                <div class="meta-val-copy">
+                  <code class="code-key" id="webhookSecretKey">factus_whsec_7d9e4a1b8c2f530691e84a2d67c50b3e</code>
+                  <button type="button" class="btn-copy" id="btnCopyWebhookSecretKey">Copiar</button>
+                </div>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">3. URL Completa con Query:</span>
+                <div class="meta-val-copy">
+                  <code class="code-ref font-mono text-sm" id="webhookFullUrl">http://localhost:3000/api/factus/webhook?key=factus_whsec_...</code>
+                  <button type="button" class="btn-copy" id="btnCopyWebhookUrl">Copiar</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="alert-info mt-3">
+              <strong>💡 Requisitos del Webhook según la documentación oficial:</strong>
+              <ul style="margin-left: 1.25rem; margin-top: 0.5rem; font-size: 0.82rem; line-height: 1.5;">
+                <li><strong>HTTPS Público:</strong> Factus Pay requiere una URL accesible por internet. En desarrollo local usa <a href="https://ngrok.com/" target="_blank" rel="noopener"><strong>ngrok</strong></a> (ej: <code>ngrok http 3000</code>) o Cloudflare Tunnel.</li>
+                <li><strong>Validación Segura:</strong> Tu backend valida la llave en query string <code>?key=...</code> con <code>crypto.timingSafeEqual</code> y responde <code>401</code> si no coincide.</li>
+                <li><strong>Tiempo de Respuesta:</strong> Tu servidor responde <code>200 OK</code> en menos de 10 segundos para confirmar la entrega y evitar reintentos.</li>
+                <li><strong>Idempotencia:</strong> Se utiliza el <code>reference_code</code> como clave única para no procesar pagos duplicados.</li>
+              </ul>
+            </div>
+
+            <div class="mt-3">
+              <button type="button" class="btn btn-outline btn-block" id="btnTestWebhookDirect">
+                🧪 Probar Petición POST Real al Webhook Local con Llave Secreta
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Panel Derecho: Visualizador del Código QR -->
-    <section class="card qr-card" id="qrCard">
-      <div class="card-header">
-        <h2>2. Código QR para Pago</h2>
-        <div class="status-badge status-waiting" id="statusBadge">Esperando monto...</div>
+    <!-- ============================================================ -->
+    <!-- MÓDULO 2: DIRECTO CELULAR (3503752816 / BANCOS)             -->
+    <!-- ============================================================ -->
+    <section class="module-section" id="module-direct">
+      <div class="module-header-card">
+        <div class="badge-tag">P2P Sin Comisiones</div>
+        <h2>💸 Cobro Directo a Celular (Nequi / Bancolombia / Banco Caja Social)</h2>
+        <p>Genera códigos QR EMVCo estándar para que los clientes te transfieran directamente al celular <strong>3503752816</strong> con el valor pre-diligenciado y sin pagar comisiones de pasarela.</p>
       </div>
 
-      <!-- Estado Inicial Vacio -->
-      <div class="empty-state" id="emptyState">
-        <div class="empty-icon">📱</div>
-        <h3>Listo para cobrar</h3>
-        <p>Ingresa el valor a cobrar y haz clic en "Generar Código QR de Pago".</p>
-      </div>
+      <div class="grid-2-col">
+        <div class="card">
+          <h3>Configurar Cobro Directo</h3>
+          <form id="directPhoneForm">
+            <div class="form-group">
+              <label for="directPhoneAmount">Monto a Cobrar (COP) *</label>
+              <div class="input-currency">
+                <span class="currency-prefix">$</span>
+                <input type="number" id="directPhoneAmount" value="30000" min="1000" required>
+                <span class="currency-tag">COP</span>
+              </div>
+            </div>
 
-      <!-- Estado con QR Activo -->
-      <div class="qr-active-state hidden" id="qrActiveState">
-        <!-- Notificación de Modo Simulación si aplica -->
-        <div class="banner-notice hidden" id="simulationNotice">
-          <span class="notice-icon">ℹ️</span>
-          <div class="notice-text">
-            <strong>Modo Sandbox:</strong>
-            <span id="simulationReason">A la espera de activación de parámetro QR en Openpay.</span>
-          </div>
+            <div class="form-group">
+              <label for="directPhoneNum">Celular Receptor de Fondos:</label>
+              <input type="tel" id="directPhoneNum" value="3503752816" maxlength="10" required>
+            </div>
+
+            <div class="form-group">
+              <label for="directEntity">Banco / Billetera Destino:</label>
+              <select id="directEntity" class="select-format">
+                <option value="CAJA_SOCIAL" selected>🏦 Banco Caja Social (Código ACH 1032 / Bre-B)</option>
+                <option value="NEQUI">📱 Nequi (+57)</option>
+                <option value="BANCOLOMBIA">🟡 Bancolombia (A la mano / QR)</option>
+                <option value="DAVIPLATA">🔴 Daviplata</option>
+                <option value="DAVIVIENDA">🏛️ Davivienda</option>
+                <option value="BBVA">🔵 BBVA Colombia</option>
+                <option value="BANCO_BOGOTA">🏛️ Banco de Bogotá</option>
+                <option value="BRE_B">🇨🇴 Bre-B Interoperable</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="directConcept">Concepto de Transferencia:</label>
+              <input type="text" id="directConcept" value="Servicio Conecta Hogar">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">
+              <span>⚡ Generar QR Bancario Directo</span>
+            </button>
+          </form>
         </div>
 
-        <!-- Timer reglamentario de 10 minutos -->
-        <div class="timer-box" id="timerBox">
-          <div class="timer-header">
-            <span class="timer-label">⏱️ Tiempo restante para pagar:</span>
-            <span class="timer-clock" id="timerClock">10:00</span>
-          </div>
-          <div class="timer-progress-bar">
-            <div class="timer-progress-fill" id="timerProgress"></div>
-          </div>
-          <small class="timer-rule">Regla Openpay: el QR expira en 10 minutos y debe actualizarse.</small>
-        </div>
-
-        <!-- Contenedor de la Imagen QR -->
-        <div class="qr-image-wrapper">
-          <div class="qr-frame">
-            <img id="qrImage" src="" alt="Código QR de Pago Openpay" width="280" height="280">
-            <div class="qr-overlay hidden" id="qrOverlay">
-              <span class="overlay-icon" id="overlayIcon">✅</span>
-              <span class="overlay-text" id="overlayText">¡PAGO EXITOSO!</span>
+        <div class="card qr-display-card">
+          <h3>Código QR EMVCo Generado</h3>
+          <div class="qr-box" id="directQrBox">
+            <img id="directQrImg" src="" alt="QR Directo" class="hidden">
+            <div class="empty-state" id="directQrEmpty">
+              <div class="empty-icon">📱</div>
+              <p>Presiona "Generar QR Bancario Directo".</p>
             </div>
           </div>
-          <div class="qr-amount-pill" id="qrAmountPill">$0 COP</div>
-        </div>
-
-        <!-- Instrucciones al Pagador -->
-        <div class="payer-instructions" id="instructionsBox"></div>
-
-        <!-- Enlace web si aplica -->
-        <div class="mobile-link-box hidden" id="mobileLinkBox">
-          <span>Enlace generado en el QR:</span>
-          <a href="#" target="_blank" id="mobilePayLink" class="link-checkout">👉 Abrir Checkout en el Navegador</a>
-        </div>
-
-        <!-- Resumen de Transacción y Consulta -->
-        <div class="tx-details">
-          <div class="tx-row">
-            <span>ID Transacción:</span>
-            <code id="txId">-</code>
-          </div>
-          <div class="tx-row">
-            <span>Orden:</span>
-            <span id="txOrderId">-</span>
-          </div>
-          <div class="tx-row">
-            <span>Modalidad QR:</span>
-            <span id="txFormatType">-</span>
-          </div>
-          <div class="tx-row">
-            <span>Estado Actual:</span>
-            <strong id="txCurrentStatusText" style="color: #b45309;">charge_pending</strong>
+          <div class="meta-table mt-3" id="directMetaTable" style="display: none;">
+            <div class="meta-row">
+              <span class="meta-label">Destino:</span>
+              <strong id="directDestText">3503752816 (Banco Caja Social)</strong>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Estándar:</span>
+              <span>EMVCo Redeban Colombia</span>
+            </div>
           </div>
         </div>
+      </div>
+    </section>
 
-        <!-- PANEL DE SIMULACIÓN Y PRUEBAS -->
-        <div class="simulation-panel">
-          <div class="sim-panel-title">🧪 PANEL DE SIMULACIÓN Y VERIFICACIÓN</div>
-          <p class="sim-panel-desc">Prueba cómo responde tu backend/Angular ante los diferentes estados de Openpay:</p>
-          <div class="sim-buttons-grid">
-            <button type="button" class="btn-sim btn-sim-success" id="btnSimulateCompleted">
-              ✅ Simular Aprobado (completed)
+    <!-- ============================================================ -->
+    <!-- MÓDULO 3: OPENPAY COLOMBIA                                   -->
+    <!-- ============================================================ -->
+    <section class="module-section" id="module-openpay">
+      <div class="module-header-card">
+        <div class="badge-tag">Openpay Colombia Sandbox</div>
+        <h2>🏦 Módulo Openpay Colombia (Comercio: mmihmqoqpbfcobqezvs6)</h2>
+        <p>Integración con la API de Openpay Colombia mediante QR EMVCo Redeban y Webcheckout Oficial (PSE / Tarjetas).</p>
+      </div>
+
+      <div class="grid-2-col">
+        <div class="card">
+          <h3>Generar Cobro Openpay</h3>
+          <form id="openpayForm">
+            <div class="form-group">
+              <label for="openpayAmount">Monto a Cobrar (COP) *</label>
+              <div class="input-currency">
+                <span class="currency-prefix">$</span>
+                <input type="number" id="openpayAmount" value="50000" min="1000" required>
+                <span class="currency-tag">COP</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="openpayFormat">Modalidad de Integración:</label>
+              <select id="openpayFormat" class="select-format">
+                <option value="emv" selected>🏦 QR Bancario EMVCo (Estándar Redeban)</option>
+                <option value="webcheckout">🌐 Webcheckout Oficial (PSE / Tarjeta Débito y Crédito)</option>
+                <option value="url">📱 Checkout Móvil Local</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="openpayConcept">Descripción:</label>
+              <input type="text" id="openpayConcept" value="Cobro con Openpay Colombia">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">
+              <span>⚡ Generar con Openpay</span>
             </button>
-            <button type="button" class="btn-sim btn-sim-danger" id="btnSimulateFailed">
-              ⚠️ Simular Rechazado (failed)
-            </button>
-            <button type="button" class="btn-sim btn-sim-warning" id="btnSimulateCancelled">
-              ❌ Simular Expirado (cancelled)
-            </button>
+          </form>
+
+          <div class="credential-box-compact mt-3">
+            <div class="cred-row"><span>Merchant ID:</span><code>mmihmqoqpbfcobqezvs6</code></div>
+            <div class="cred-row"><span>Llave Pública:</span><code>pk_1ea64283...</code></div>
           </div>
         </div>
 
-        <!-- Acciones del QR -->
-        <div class="qr-actions">
-          <button type="button" class="btn btn-outline" id="btnCheckStatus">
-            <span>🔄 Consultar Estado API (GET)</span>
-          </button>
-          <button type="button" class="btn btn-outline" id="btnToggleJson">
-            <span>🔍 Ver JSON de Respuesta</span>
-          </button>
+        <div class="card qr-display-card">
+          <h3>QR / Checkout Openpay</h3>
+          <div class="qr-box" id="openpayQrBox">
+            <img id="openpayQrImg" src="" alt="QR Openpay" class="hidden">
+            <div class="empty-state" id="openpayQrEmpty">
+              <div class="empty-icon">🏦</div>
+              <p>Genera un cobro con Openpay a la izquierda.</p>
+            </div>
+          </div>
+          <div class="mt-3" id="openpayLinkContainer" style="display: none;">
+            <a href="#" target="_blank" id="openpayWebLink" class="btn btn-outline btn-block text-center">
+              👉 Abrir Pasarela Webcheckout Openpay
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- MÓDULO 4: MONITOR DE WEBHOOKS EN VIVO                        -->
+    <!-- ============================================================ -->
+    <section class="module-section" id="module-webhooks">
+      <div class="module-header-card">
+        <div class="badge-tag">Auditoría en Tiempo Real</div>
+        <h2>📡 Monitor de Webhooks & Notificaciones de Pago</h2>
+        <p>Visualiza en vivo los eventos de pago enviados por las pasarelas (Factus Pay y Openpay) a tu servidor.</p>
+      </div>
+
+      <div class="card">
+        <div class="table-header-toolbar">
+          <div>
+            <h3>Registro de Eventos Recibidos</h3>
+            <p class="card-subtitle">Actualización continua de pagos completados, rechazados o simulados.</p>
+          </div>
+          <div>
+            <button type="button" class="btn btn-sm btn-outline" id="btnRefreshWebhooks">🔄 Refrescar</button>
+            <button type="button" class="btn btn-sm btn-danger ml-2" id="btnClearWebhooks">Limpiar Logs</button>
+          </div>
         </div>
 
-        <!-- Visor JSON de la Transacción -->
-        <div class="json-viewer hidden" id="jsonViewer">
-          <div class="json-viewer-header">
-            <span>GET /api/qr/status/:transactionId</span>
-            <button type="button" class="btn-close-json" id="btnCloseJson">✕</button>
-          </div>
-          <pre id="jsonContent"></pre>
+        <div class="table-responsive">
+          <table class="styled-table" id="tableWebhooks">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Fecha / Hora</th>
+                <th>Evento</th>
+                <th>Referencia</th>
+                <th>Monto (COP)</th>
+                <th>Pagador (Payer)</th>
+                <th>Estado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tableWebhooksBody">
+              <tr>
+                <td colspan="8" class="text-center py-4">No hay webhooks registrados aún.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
   </main>
 
+  <!-- MODAL PARA VER DETALLE Y QR EN GRANDE -->
+  <div class="modal-backdrop hidden" id="detailModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modalTitle">Detalle del Recaudo</h3>
+        <button type="button" class="btn-close" id="btnModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-qr-center">
+          <img id="modalQrImg" src="" alt="QR Recaudo" width="260" height="260">
+        </div>
+        <div class="meta-table mt-3" id="modalMetaTable">
+          <!-- Diligenciado dinámicamente -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnModalCloseFooter">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ESCÁNER CON CÁMARA EN VIVO (EMULADOR DE BANCO) -->
+  <div class="modal-backdrop hidden" id="scannerModal">
+    <div class="modal-dialog" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>📷 Escáner QR de Cámara (Emulador Banco)</h3>
+        <button type="button" class="btn-close" id="btnCloseScannerModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="card-subtitle text-center" style="margin-bottom: 0.75rem;">
+          Apunta la cámara de tu PC o celular al código QR para simular la lectura de la app bancaria.
+        </p>
+
+        <!-- Contenedor del video de la cámara -->
+        <div id="reader" style="width: 100%; border-radius: 8px; overflow: hidden; background: #000; min-height: 250px;"></div>
+
+        <!-- Resultado al detectar el QR -->
+        <div class="hidden mt-3" id="scannerResultBox" style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:1rem;">
+          <h4 style="color:#166534;">✅ ¡Código QR Escaneado!</h4>
+          <p class="mt-1" style="font-size:0.85rem;">El recaudo ha pasado a estado <strong>started</strong>.</p>
+          <div class="meta-table mt-2" style="background:#fff;">
+            <div class="meta-row"><span class="meta-label">Llave Bre-B:</span><code class="code-key" id="scannerBrebKey">-</code></div>
+            <div class="meta-row"><span class="meta-label">Monto:</span><strong class="text-primary font-bold" id="scannerAmount">-</strong></div>
+          </div>
+          <button type="button" class="btn btn-success btn-block mt-3" id="btnScannerConfirmPay">
+            💳 Simular Autorización y Pago (paid)
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnCancelScanner">Detener Cámara y Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <footer class="footer">
     <div class="container footer-content">
-      <p>Integración API Openpay Colombia &copy; 2026 - Redeban QR & Webcheckout</p>
+      <p>Pasarelas de Pago Colombia &copy; 2026 - Factus Pay (Bre-B) & Openpay</p>
       <div class="footer-links">
-        <a href="https://documents.openpay.co/api/#qr" target="_blank" rel="noopener">Documentación Openpay QR</a>
+        <a href="https://pay-developers.factus.com.co/" target="_blank" rel="noopener">Documentación Factus Pay</a>
+        <span>|</span>
+        <a href="https://documents.openpay.co/api/#qr" target="_blank" rel="noopener">Documentación Openpay</a>
       </div>
     </div>
   </footer>

@@ -1,0 +1,325 @@
+<div class="factus-container">
+  <!-- Cabecera del Módulo Factus Pay -->
+  <header class="factus-header">
+    <div class="brand-title">
+      <span class="badge-breb">Bre-B</span>
+      <h2>Módulo de Recaudos Factus Pay</h2>
+    </div>
+    <div class="env-pill" [class.online]="diagnosticData?.success">
+      <span class="dot"></span>
+      {{ diagnosticData?.environment || 'sandbox' | uppercase }} ({{ diagnosticData?.latencyMs || 0 }}ms)
+    </div>
+  </header>
+
+  <!-- Sub-Navegación del Módulo Factus -->
+  <nav class="sub-nav">
+    <button [class.active]="activeSubTab === 'create'" (click)="activeSubTab = 'create'">
+      ➕ Nuevo Recaudo
+    </button>
+    <button [class.active]="activeSubTab === 'list'" (click)="activeSubTab = 'list'; loadCollections()">
+      📋 Historial de Pagos
+      <span class="badge-count" *ngIf="totalCollections > 0">{{ totalCollections }}</span>
+    </button>
+    <button [class.active]="activeSubTab === 'verify'" (click)="activeSubTab = 'verify'">
+      🔍 Verificar Estado
+    </button>
+    <button [class.active]="activeSubTab === 'simulate'" (click)="activeSubTab = 'simulate'">
+      🧪 Simulador Sandbox
+    </button>
+    <button [class.active]="activeSubTab === 'diagnostics'" (click)="activeSubTab = 'diagnostics'; testApiConnection()">
+      ⚙️ Diagnóstico & Webhooks
+    </button>
+  </nav>
+
+  <!-- ================= SUB-TAB 1: CREAR RECAUDO ================= -->
+  <section *ngIf="activeSubTab === 'create'" class="tab-content">
+    <div class="grid-layout">
+      <!-- Formulario -->
+      <div class="card form-card">
+        <h3>Generar Nuevo Cobro Bre-B</h3>
+        <p class="subtitle">Genera un código QR dinámico e interoperable con cualquier banco o billetera en Colombia.</p>
+
+        <div class="form-group">
+          <label>Monto a Cobrar (COP) *</label>
+          <div class="input-prefix">
+            <span>$</span>
+            <input type="number" [(ngModel)]="amount" min="1000" max="12100000" placeholder="25000" />
+          </div>
+          <small class="helper-text">Rango permitido: $1.000 a $12.100.000 COP</small>
+        </div>
+
+        <div class="form-group">
+          <label>Concepto / Descripción</label>
+          <input type="text" [(ngModel)]="description" placeholder="Ej. Pago servicio Conecta Hogar" />
+        </div>
+
+        <div class="form-group">
+          <label>Código de Referencia (Opcional)</label>
+          <input type="text" [(ngModel)]="customReference" placeholder="Dejar vacío para auto-generar" />
+        </div>
+
+        <button class="btn btn-primary btn-block" (click)="generateQr()" [disabled]="loadingGenerate">
+          <span *ngIf="loadingGenerate">Generando QR con Factus Pay...</span>
+          <span *ngIf="!loadingGenerate">⚡ Generar Código QR Bre-B</span>
+        </button>
+      </div>
+
+      <!-- Tarjeta de Resultado con QR -->
+      <div class="card qr-card" *ngIf="createdCollection">
+        <div class="status-header">
+          <span class="status-badge" [ngClass]="createdCollection.status">
+            {{ createdCollection.status | uppercase }}
+          </span>
+          <span class="currency-tag">COP {{ createdCollection.amount | number }}</span>
+        </div>
+
+        <div class="qr-wrapper" *ngIf="createdCollection.qr">
+          <img [src]="createdCollection.qr" alt="QR Factus Pay" />
+        </div>
+
+        <div class="meta-info">
+          <div class="info-row">
+            <span class="label">Llave Bre-B:</span>
+            <span class="value key-breb">
+              {{ createdCollection.breb_key }}
+              <button class="btn-icon" (click)="copyText(createdCollection.breb_key)">📋</button>
+            </span>
+          </div>
+
+          <div class="info-row">
+            <span class="label">Referencia:</span>
+            <span class="value">{{ createdCollection.reference_code }}</span>
+          </div>
+
+          <div class="info-row" *ngIf="createdCollection.qr_expires_at">
+            <span class="label">Expira:</span>
+            <span class="value">{{ createdCollection.qr_expires_at }}</span>
+          </div>
+        </div>
+
+        <div class="polling-indicator" *ngIf="createdCollection.status === 'ready'">
+          <span class="pulse-dot"></span>
+          <span>Esperando que el cliente escanee y confirme el pago...</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SUB-TAB 2: HISTORIAL DE PAGOS ================= -->
+  <section *ngIf="activeSubTab === 'list'" class="tab-content">
+    <div class="card">
+      <div class="table-toolbar">
+        <h3>Historial de Recaudos Registrados</h3>
+        <div class="filters-row">
+          <select [(ngModel)]="filterStatus" (change)="loadCollections(1)">
+            <option value="all">Todos los Estados</option>
+            <option value="ready">Ready (En espera)</option>
+            <option value="started">Started (Iniciado)</option>
+            <option value="paid">Paid (Pagado)</option>
+            <option value="rejected">Rejected (Rechazado)</option>
+            <option value="failed">Failed (Fallido)</option>
+          </select>
+
+          <input type="text" [(ngModel)]="searchQuery" (keyup.enter)="loadCollections(1)" placeholder="Buscar por referencia..." />
+          <button class="btn btn-secondary" (click)="loadCollections(1)">Buscar</button>
+          <button class="btn btn-outline" (click)="loadCollections(currentPage)">🔄 Refrescar</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Referencia</th>
+              <th>Monto (COP)</th>
+              <th>Llave Bre-B</th>
+              <th>Fecha Creación</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of collections">
+              <td class="font-mono"><strong>{{ item.reference_code }}</strong></td>
+              <td>\${{ item.amount | number }}</td>
+              <td class="font-mono text-muted">{{ item.breb_key }}</td>
+              <td>{{ item.created_at }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="item.status">{{ item.status }}</span>
+              </td>
+              <td>
+                <button class="btn-action" (click)="viewCollectionModal(item)">👁️ Ver QR / Detalle</button>
+              </td>
+            </tr>
+            <tr *ngIf="collections.length === 0 && !loadingList">
+              <td colspan="6" class="text-center py-4">No se encontraron recaudos registrados.</td>
+            </tr>
+            <tr *ngIf="loadingList">
+              <td colspan="6" class="text-center py-4">Cargando recaudos desde Factus Pay...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginación -->
+      <div class="pagination-bar" *ngIf="totalPages > 1">
+        <button class="btn btn-sm" [disabled]="currentPage <= 1" (click)="loadCollections(currentPage - 1)">« Anterior</button>
+        <span>Página {{ currentPage }} de {{ totalPages }}</span>
+        <button class="btn btn-sm" [disabled]="currentPage >= totalPages" (click)="loadCollections(currentPage + 1)">Siguiente »</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SUB-TAB 3: VERIFICAR ESTADO ================= -->
+  <section *ngIf="activeSubTab === 'verify'" class="tab-content">
+    <div class="card form-card max-w-600">
+      <h3>Consultar Estado de un Recaudo</h3>
+      <p class="subtitle">Ingresa el código de referencia para verificar en tiempo real el estado en los servidores de Factus.</p>
+
+      <div class="form-group">
+        <label>Código de Referencia (reference_code) *</label>
+        <div class="search-input-group">
+          <input type="text" [(ngModel)]="verifyReferenceCode" placeholder="Ej. FACTUS-1792787597621" />
+          <button class="btn btn-primary" (click)="verifyStatus()" [disabled]="loadingVerify">
+            {{ loadingVerify ? 'Consultando...' : '🔍 Consultar' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="verified-card" *ngIf="verifiedResult">
+        <div class="status-header">
+          <span class="status-badge" [ngClass]="verifiedResult.status">{{ verifiedResult.status | uppercase }}</span>
+          <span class="currency-tag">\${{ verifiedResult.amount | number }} COP</span>
+        </div>
+
+        <div class="meta-info">
+          <div class="info-row"><span class="label">Referencia:</span><span class="value">{{ verifiedResult.reference_code }}</span></div>
+          <div class="info-row"><span class="label">Llave Bre-B:</span><span class="value">{{ verifiedResult.breb_key }}</span></div>
+          <div class="info-row"><span class="label">Fecha Creación:</span><span class="value">{{ verifiedResult.created_at }}</span></div>
+          <div class="info-row" *ngIf="verifiedResult.qr_expires_at"><span class="label">Expira:</span><span class="value">{{ verifiedResult.qr_expires_at }}</span></div>
+        </div>
+
+        <div class="qr-wrapper sm" *ngIf="verifiedResult.qr">
+          <img [src]="verifiedResult.qr" alt="QR Verificado" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SUB-TAB 4: SIMULADOR SANDBOX ================= -->
+  <section *ngIf="activeSubTab === 'simulate'" class="tab-content">
+    <div class="grid-layout">
+      <div class="card form-card">
+        <h3>🧪 Simulador de Pagos Sandbox</h3>
+        <p class="subtitle">Prueba los diferentes escenarios de respuesta de la red Bre-B / Factus sin dinero real.</p>
+
+        <div class="form-group">
+          <label>Código de Referencia a Simular *</label>
+          <input type="text" [(ngModel)]="simulateReferenceCode" placeholder="FACTUS-..." />
+        </div>
+
+        <div class="form-group">
+          <label>Monto de la Transacción (COP)</label>
+          <input type="number" [(ngModel)]="simulateAmount" placeholder="25000" />
+        </div>
+
+        <div class="form-group">
+          <label>Escenario de Simulación *</label>
+          <select [(ngModel)]="simulateScenario">
+            <option value="paid">✅ Pago Exitoso (paid)</option>
+            <option value="tx_insufficient_funds">❌ Saldo Insuficiente (tx_insufficient_funds -> rejected)</option>
+            <option value="tx_account_error">⚠️ Error de Cuenta (tx_account_error -> failed)</option>
+            <option value="tx_timeout">⏳ Tiempo de Espera Agotado (tx_timeout -> failed)</option>
+          </select>
+        </div>
+
+        <button class="btn btn-warning btn-block" (click)="executeSimulation()" [disabled]="loadingSimulate">
+          {{ loadingSimulate ? 'Simulando...' : '🚀 Ejecutar Simulación' }}
+        </button>
+      </div>
+
+      <div class="card" *ngIf="simulationResult">
+        <h3>Resultado de la Simulación</h3>
+        <div class="alert-box" [class.success]="simulationResult.resulting_status === 'paid'" [class.danger]="simulationResult.resulting_status !== 'paid'">
+          <strong>{{ simulationResult.message }}</strong>
+          <p>Estado resultante: <span class="status-badge" [ngClass]="simulationResult.resulting_status">{{ simulationResult.resulting_status }}</span></p>
+        </div>
+
+        <h4>Payload del Webhook Generado:</h4>
+        <pre class="json-code">{{ simulationResult.simulated_payload | json }}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SUB-TAB 5: DIAGNÓSTICO & WEBHOOKS ================= -->
+  <section *ngIf="activeSubTab === 'diagnostics'" class="tab-content">
+    <div class="grid-layout">
+      <!-- Diagnóstico Conexión -->
+      <div class="card">
+        <h3>Estado de Conectividad con Factus Pay</h3>
+        <div class="meta-info" *ngIf="diagnosticData">
+          <div class="info-row"><span class="label">Estado API:</span><span class="value text-success">Operativa 🟢</span></div>
+          <div class="info-row"><span class="label">Ambiente:</span><span class="value">{{ diagnosticData.environment | uppercase }}</span></div>
+          <div class="info-row"><span class="label">URL Base:</span><span class="value font-mono">{{ diagnosticData.baseUrl }}</span></div>
+          <div class="info-row"><span class="label">Cuenta Autenticada:</span><span class="value">{{ diagnosticData.email }}</span></div>
+          <div class="info-row"><span class="label">Latencia Ping:</span><span class="value">{{ diagnosticData.latencyMs }} ms</span></div>
+          <div class="info-row"><span class="label">Token Bearer:</span><span class="value text-success">Válido en memoria</span></div>
+        </div>
+        <button class="btn btn-outline mt-3" (click)="testApiConnection()">🔄 Test Conectividad</button>
+      </div>
+
+      <!-- Monitor de Webhooks -->
+      <div class="card">
+        <div class="d-flex-between">
+          <h3>Monitor de Webhooks en Vivo</h3>
+          <div>
+            <button class="btn btn-sm btn-outline" (click)="loadWebhookLogs()">Refrescar</button>
+            <button class="btn btn-sm btn-danger ml-2" (click)="clearWebhooks()">Limpiar</button>
+          </div>
+        </div>
+
+        <div class="webhook-list" *ngIf="webhookLogs.length > 0">
+          <div class="webhook-item" *ngFor="let wh of webhookLogs">
+            <div class="wh-top">
+              <span class="font-mono"><strong>{{ wh.reference_code }}</strong></span>
+              <span class="status-badge" [ngClass]="wh.status">{{ wh.status }}</span>
+            </div>
+            <div class="wh-bottom">
+              <small>{{ wh.received_at | date:'medium' }}</small>
+              <small *ngIf="wh.amount">\${{ wh.amount | number }} COP</small>
+            </div>
+          </div>
+        </div>
+
+        <p *ngIf="webhookLogs.length === 0" class="text-muted text-center py-4">
+          No hay webhooks registrados aún. Puedes generar uno usando el Simulador Sandbox.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal Detalle QR -->
+  <div class="modal-backdrop" *ngIf="selectedCollectionDetail" (click)="closeModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Detalle de Recaudo Factus Pay</h3>
+        <button class="btn-close" (click)="closeModal()">✕</button>
+      </div>
+      <div class="modal-body text-center">
+        <div class="qr-wrapper" *ngIf="selectedCollectionDetail.qr">
+          <img [src]="selectedCollectionDetail.qr" alt="QR Factus" />
+        </div>
+        <div class="meta-info text-left mt-3">
+          <div class="info-row"><span class="label">Referencia:</span><span class="value font-mono">{{ selectedCollectionDetail.reference_code }}</span></div>
+          <div class="info-row"><span class="label">Monto:</span><span class="value font-bold">\${{ selectedCollectionDetail.amount | number }} COP</span></div>
+          <div class="info-row"><span class="label">Llave Bre-B:</span><span class="value font-mono">{{ selectedCollectionDetail.breb_key }}</span></div>
+          <div class="info-row"><span class="label">Estado:</span><span class="status-badge" [ngClass]="selectedCollectionDetail.status">{{ selectedCollectionDetail.status }}</span></div>
+          <div class="info-row" *ngIf="selectedCollectionDetail.created_at"><span class="label">Fecha:</span><span class="value">{{ selectedCollectionDetail.created_at }}</span></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>

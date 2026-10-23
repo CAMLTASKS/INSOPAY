@@ -1,16 +1,19 @@
 {
   "name": "openpay-colombia-qr-service",
   "version": "1.0.0",
-  "description": "Servicio Node.js y Angular para generación y consulta de pagos QR con Openpay Colombia",
+  "description": "Servicio Node.js y Angular para generación y consulta de pagos QR con Openpay Colombia y Factus Pay",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "generate-qr": "node scripts/generate-qr-cli.js",
+    "generate-factus": "node scripts/generate-factus-cli.js",
     "test": "node scripts/test-server.js"
   },
   "keywords": [
     "openpay",
+    "factus-pay",
+    "bre-b",
     "qr",
     "colombia",
     "pse",

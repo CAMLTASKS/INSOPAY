@@ -1,191 +1,158 @@
-# Servicio de Pagos con Código QR - Openpay Colombia 🇨🇴
+# PayHub Colombia - Pasarela de Pagos QR & Bre-B 🇨🇴
 
-Servicio completo en **Node.js (Express)** y **Angular (TypeScript)** para la generación, visualización y consulta de cargos con **Código QR Dinámico** integrado con la pasarela **Openpay Colombia** (Redeban).
-
----
-
-## 📋 Credenciales y Configuración (Sandbox)
-
-El servicio ya viene preconfigurado con tus credenciales de Openpay:
-
-- **Merchant ID:** `mmihmqoqpbfcobqezvs6`
-- **Llave Secreta:** `sk_d6d93ebea13e44f093f1eb75179161e7`
-- **Llave Pública:** `pk_1ea642830c114f56b04a353f5ab94e14`
-- **URL Base:** `https://sandbox-api.openpay.co/v1/`
-- **Moneda:** `COP` (Pesos Colombianos)
-
-> ⚠️ **Importante de Seguridad (Openpay):**
-> La generación de cargos QR requiere la **Llave Privada / Secreta** (`sk_...`) con autenticación HTTP Basic. Openpay **prohíbe estrictamente** el uso de la llave secreta desde el navegador/frontend JavaScript (Error `1010 Forbidden`). Por eso la generación se procesa a través del servicio seguro de **Node.js**, y el frontend (Angular o Web) consume este servicio.
+Plataforma unificada en **Node.js (Express)** y **Angular (TypeScript)** para generación, consulta, auditoría y simulación de cobros mediante **Código QR Dinámico** integrado con:
+1. ⚡ **Factus Pay** (API oficial [pay-developers.factus.com.co](https://pay-developers.factus.com.co/) con red interoperable **Bre-B Colombia**)
+2. 💸 **Cobro Directo Celular al `3503752816`** (Nequi, Bancolombia, Banco Caja Social - 0% comisión)
+3. 🏦 **Openpay Colombia** (Comercio `mmihmqoqpbfcobqezvs6` - Redeban QR y Webcheckout)
+4. 📡 **Monitor de Webhooks en Vivo** (Auditoría en tiempo real de eventos de pago)
 
 ---
 
-## 🚀 Inicio Rápido
+## 🧭 Módulos Disponibles en la Barra de Navegación (Top Nav)
 
-### 1. Instalar dependencias
-```bash
-npm install
-```
+Al ingresar a **`http://localhost:3000`** encontrarás una barra superior con 4 módulos principales:
 
-### 2. Iniciar el servidor
-```bash
-npm start
-```
-El servidor arrancará en: **`http://localhost:3000`**
-
-### 3. Probar la interfaz visual interactiva
-Abre en tu navegador:
-👉 **[http://localhost:3000](http://localhost:3000)**
-
-Podrás:
-1. Digitar cualquier valor a cobrar (ej: `$25.000 COP`, `$50.000 COP`).
-2. Generar el código QR dinámico al instante.
-3. Ver el **temporizador regresivo reglamentario de 10 minutos** con barra de progreso.
-4. Ver el sondeo automático de estado cada 30 segundos (`charge_pending`, `completed`, `cancelled`, `failed`).
-5. Simular el pago exitoso en Sandbox con un clic.
-
----
-
-## 💻 Prueba desde Terminal (CLI)
-
-Puedes generar un código QR y verificar la respuesta de Openpay directamente desde la línea de comandos sin abrir el navegador:
-
-```bash
-# Probar con valor por defecto
-npm run test
-
-# O pasar cualquier valor personalizado como argumento (ej: $45.000 COP):
-npm run generate-qr 45000
-```
+### 1. ⚡ Módulo Factus Pay (Bre-B Interoperable)
+Con sub-pestañas para explotar **el 100% de las funcionalidades de la API de Factus**:
+- **➕ Generar Recaudo (`POST /v1/collections`):**
+  - Montos entre \$1.000 y \$12.100.000 COP con validación.
+  - Generación de código QR inmediato en imagen PNG Base64.
+  - Asignación de la **Llave Bre-B** oficial (ej: `@FCN3WVGF1E4AMS09CRMT`).
+  - Botón para copiar la llave Bre-B y descargar la imagen QR.
+  - Contador de vigencia (24 horas).
+  - Polling en vivo cada 7 segundos para detectar cuando el cliente pague.
+- **📋 Historial de Pagos (`GET /v1/collections`):**
+  - Métricas en tiempo real: Total recaudos, Total en COP, Recaudos Pagados vs En Espera.
+  - Tabla paginada con filtros por estado (`ready`, `started`, `paid`, `rejected`, `failed`).
+  - Búsqueda instantánea por código de referencia o llave Bre-B.
+  - Botón de acción **"👁️ Ver Detalle / QR"** con modal emergente para ver el QR en grande y sus datos técnicos.
+- **🔍 Verificar Estado (`GET /v1/collections/:referenceCode`):**
+  - Búsqueda directa por `reference_code`.
+  - Muestra badges de estado en tiempo real, metadatos, QR asociado y JSON crudo devuelto por la API.
+- **🧪 Simulador Sandbox:**
+  - Pruebas oficiales según la documentación de Factus Pay Sandbox:
+    - ✅ **Pago Exitoso** (`paid`)
+    - ❌ **Saldo Insuficiente** (`tx_insufficient_funds` -> `rejected`)
+    - ⚠️ **Error de Cuenta** (`tx_account_error` -> `failed`)
+    - ⏳ **Tiempo de Espera Agotado** (`tx_timeout` -> `failed`)
+  - Dispara automáticamente el evento de webhook correspondiente hacia tu backend.
+- **⚙️ Diagnóstico & Conexión:**
+  - Test de latencia y ping hacia la API de Factus (`https://pay-api-sandbox.factus.com.co`).
+  - Verificación del estado del Token JWT Bearer.
+  - URL lista para registrar en tu panel de Factus como Webhook.
 
 ---
 
-## 📡 Endpoints de la API Node.js
-
-### 1. Generar Código QR de Pago
-- **Ruta:** `POST /api/qr/generate`
-- **Headers:** `Content-Type: application/json`
-- **Body:**
-```json
-{
-  "amount": 50000,
-  "description": "Pago de pedido #1042",
-  "order_id": "ORD-12345",
-  "customer": {
-    "name": "Juan",
-    "last_name": "Perez",
-    "email": "juan.perez@ejemplo.com",
-    "phone_number": "3001234567"
-  }
-}
-```
-
-- **Respuesta (201 Created):**
-```json
-{
-  "success": true,
-  "message": "Código QR generado satisfactoriamente",
-  "is_simulation": false,
-  "charge": {
-    "id": "trrftc5hz1mshp6yygwj",
-    "amount": 50000,
-    "currency": "COP",
-    "status": "charge_pending",
-    "creation_date": "2026-10-22T15:20:00-05:00",
-    "order_id": "ORD-12345",
-    "payment_method": {
-      "type": "qr",
-      "barcode_base64": "iVBORw0KGgoAAAANSUhEUgAAAYEAAAGBAQAAAACoIjCJAAAH...",
-      "qr_type": "dynamic"
-    },
-    "timer": {
-      "duration_minutes": 10,
-      "expires_at": "2026-10-22T15:30:00-05:00",
-      "expires_in_seconds": 600,
-      "must_refresh": true
-    }
-  }
-}
-```
-
-#### Para mostrar la imagen en HTML:
-```html
-<img width="300" height="300" src="data:image/png;base64,{charge.payment_method.barcode_base64}">
-```
+### 2. 💸 Módulo Directo Celular (3503752816)
+Genera códigos QR bajo el estándar internacional **EMVCo Redeban Colombia** para transferencias directas de persona a persona (P2P) al número **3503752816**:
+- **Banco Caja Social** (código ACH `1032` / Bre-B)
+- **Nequi** (+57)
+- **Bancolombia**
+- **Daviplata**, **BBVA**, **Banco de Bogotá**, etc.
+- Sin cobro de comisiones de intermediarios.
 
 ---
 
-### 2. Consultar Estado de la Transacción QR
-- **Ruta:** `GET /api/qr/status/:transactionId`
-- **Descripción:** Consulta a Openpay el estado del cargo. Según la documentación oficial de Openpay, se debe invocar en intervalos no menores a 30 segundos.
-- **Valores posibles de `status`:**
-  - `charge_pending`: Transacción activa esperando que el cliente pague.
-  - `completed`: Transacción pagada exitosamente.
-  - `cancelled`: Transacción expirada (se cumplieron los 10 minutos sin pago) o cancelada.
-  - `failed`: Transacción fallida.
+### 3. 🏦 Módulo Openpay Colombia
+Integración con las credenciales de Sandbox Openpay (`mmihmqoqpbfcobqezvs6`):
+- **QR Bancario EMVCo:** Para escanear en apps financieras bajo la red Redeban.
+- **Webcheckout Oficial:** Genera enlace seguro para pagos con PSE o tarjetas de débito/crédito.
 
 ---
 
-### 3. Simular Pago Exitoso (Ambiente Sandbox)
-- **Ruta:** `POST /api/qr/simulate-payment/:transactionId`
-- **Descripción:** Pasa la transacción a estado `completed` para pruebas locales.
+### 4. 📡 Monitor de Webhooks en Vivo
+Panel de auditoría que registra en tiempo real todos los eventos recibidos en tu servidor, mostrando ID, timestamp, evento, referencia, monto, estado y visor de payload JSON.
 
 ---
 
-## 🅰️ Integración en Angular
+## 🛠️ Endpoints REST del Backend (Node.js / Express)
 
-En la carpeta [`angular/`](./angular/) se incluye el servicio completo y un componente listo para usar:
+### Factus Pay:
+| Método | Ruta | Descripción |
+| :--- | :--- | :--- |
+| **POST** | `/api/factus/generate` | Generar nuevo recaudo y código QR |
+| **GET** | `/api/factus/collections` | Listar recaudos con paginación (`?page=1&status=ready&reference_code=...`) |
+| **GET** | `/api/factus/status/:referenceCode` | Consultar estado y detalle de un recaudo |
+| **POST** | `/api/factus/simulate` | Simular escenarios (`paid`, `tx_insufficient_funds`, etc.) |
+| **GET** | `/api/factus/test-connection` | Probar ping y estado del token de autenticación |
+| **GET** | `/api/factus/webhooks` | Obtener historial de webhooks recibidos |
+| **DELETE** | `/api/factus/webhooks` | Limpiar historial de webhooks |
+| **POST** | `/api/factus/webhook` | Endpoint receptor oficial de Factus Pay |
 
-- [`angular/openpay-qr.service.ts`](./angular/openpay-qr.service.ts): Servicio `@Injectable` con `generateQr()`, `checkStatus()`, y `pollStatusUntilFinished()`.
-- [`angular/openpay-qr.models.ts`](./angular/openpay-qr.models.ts): Interfaces TypeScript completas.
-- [`angular/qr-payment.component.ts`](./angular/qr-payment.component.ts): Componente Standalone con timer de 10 min y visualización.
+### QR Directo y Openpay:
+| Método | Ruta | Descripción |
+| :--- | :--- | :--- |
+| **POST** | `/api/qr/generate` | Generar QR (Directo Celular u Openpay) |
+| **GET** | `/api/qr/charge/:id` | Consultar estado en Openpay |
+| **POST** | `/api/qr/webhook` | Webhook de Openpay |
 
-### Ejemplo de uso rápido en Angular:
+---
+
+## 🅰️ Componente y Servicio Angular Listos para Usar
+
+En la carpeta [`angular/`](file:///c:/Users/carlosamaldonadol/Documents/qr/angular/) dispones de la solución completa en TypeScript:
+
+1. **Modelos TypeScript:** [`angular/factus-pay.models.ts`](file:///c:/Users/carlosamaldonadol/Documents/qr/angular/factus-pay.models.ts)
+2. **Servicio Injectable:** [`angular/factus-pay.service.ts`](file:///c:/Users/carlosamaldonadol/Documents/qr/angular/factus-pay.service.ts)
+3. **Componente Completo (Standalone):**
+   - [`angular/factus-module/factus-pay.component.ts`](file:///c:/Users/carlosamaldonadol/Documents/qr/angular/factus-module/factus-pay.component.ts)
+   - [`angular/factus-module/factus-pay.component.html`](file:///c:/Users/carlosamaldonadol/Documents/qr/angular/factus-module/factus-pay.component.html)
+   - [`angular/factus-module/factus-pay.component.css`](file:///c:/Users/carlosamaldonadol/Documents/qr/angular/factus-module/factus-pay.component.css)
+
+### Ejemplo de uso del servicio en Angular:
 ```typescript
 import { Component } from '@angular/core';
-import { OpenpayQrService } from './openpay-qr.service';
+import { FactusPayService } from './factus-pay.service';
 
 @Component({
-  selector: 'app-checkout',
+  selector: 'app-pago-breb',
   template: `
-    <button (click)="crearCobro(30000)">Cobrar $30.000 COP con QR</button>
-    <div *ngIf="qrImage">
-      <img [src]="'data:image/png;base64,' + qrImage" width="280" height="280" />
+    <button (click)="crearCobro(25000)">Cobrar $25.000 con Factus Pay</button>
+    <div *ngIf="qr">
+      <img [src]="qr" width="280" height="280" alt="QR Bre-B" />
+      <p>Llave Bre-B: <strong>{{ brebKey }}</strong></p>
+      <p>Estado: {{ estado }}</p>
     </div>
   `
 })
-export class CheckoutComponent {
-  qrImage: string | null = null;
+export class PagoBrebComponent {
+  qr?: string;
+  brebKey?: string;
+  estado: string = 'ready';
 
-  constructor(private qrService: OpenpayQrService) {}
+  constructor(private factus: FactusPayService) {}
 
   crearCobro(monto: number) {
-    this.qrService.generateQuickQr(monto, 'Compra express').subscribe({
-      next: (res) => {
-        if (res.success && res.charge) {
-          this.qrImage = res.charge.payment_method.barcode_base64;
-          
-          // Escuchar el pago automáticamente cada 30s
-          this.qrService.pollStatusUntilFinished(res.charge.id).subscribe((charge) => {
-            if (charge.status === 'completed') {
-              alert('¡Pago recibido con éxito!');
+    this.factus.createCollection({ amount: monto, description: 'Servicio Conecta Hogar' })
+      .subscribe(res => {
+        this.qr = res.data.qr;
+        this.brebKey = res.data.breb_key;
+        this.estado = res.data.status;
+
+        // Polling automático hasta que pase a paid/failed
+        this.factus.pollStatusUntilFinished(res.data.reference_code, 7000)
+          .subscribe(actualizacion => {
+            this.estado = actualizacion.status;
+            if (actualizacion.status === 'paid') {
+              alert('¡Pago completado con éxito!');
             }
           });
-        }
-      }
-    });
+      });
   }
 }
 ```
 
 ---
 
-## ⚙️ Validación Técnica y Reglas de Openpay Colombia
+## 💻 Comandos de Consola (CLI)
 
-1. **Moneda y Monto:**
-   - Moneda: `COP`.
-   - El monto debe ser un entero positivo mayor a 0 (ej. `50000` para $50.000 COP). **No debe contener decimales**.
-2. **Temporizador de 10 Minutos:**
-   - La normativa de certificación técnica de Openpay exige que el comercio controle la expiración del QR cada 10 minutos. El servicio incluye este temporizador tanto en el backend como en las interfaces visuales.
-3. **Parámetro "Comercio QR" en Sandbox:**
-   - La API de Openpay Sandbox retornará el error `422 (1003): "El comercio no tiene configurado el parametro de comercio QR"` si la cuenta aún no tiene habilitado el módulo QR con Redeban por parte de Openpay.
-   - Este proyecto incluye **modo de contingencia / simulación automática** (`ENABLE_QR_FALLBACK_SIMULATION=true` en `.env`), lo que te permite probar toda la experiencia, generar imágenes QR base64 reales y consultar estados mientras solicitas a soporte de Openpay (`soporte@openpay.co`) la activación del flag en tu comercio. En cuanto soporte lo active, el servicio consumirá automáticamente la pasarela de Openpay sin requerir ningún cambio de código.
+```bash
+# Probar Factus Pay con $35.000 COP
+npm run generate-factus 35000
+
+# Probar Openpay con $25.000 COP
+npm run generate-qr 25000
+
+# Iniciar servidor
+npm start
+```

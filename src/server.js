@@ -1,8 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const config = require('./config/openpay.config');
+const openpayConfig = require('./config/openpay.config');
+const factusConfig = require('./config/factus.config');
 const qrRoutes = require('./routes/qr.routes');
+const factusRoutes = require('./routes/factus.routes');
 const qrController = require('./controllers/qr.controller');
 
 const app = express();
@@ -18,16 +20,27 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Ruta directa para pago móvil al escanear QR con la cámara del celular
 app.get('/pay/:transactionId', (req, res) => qrController.renderMobilePayPage(req, res));
 
-// Rutas de la API
-app.use('/api/qr', qrRoutes);
+// Rutas de las pasarelas
+app.use('/api/qr', qrRoutes);        // Openpay & Directo
+app.use('/api/factus', factusRoutes); // Factus Pay
 
-// Health check
+// Health check global
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    service: 'Openpay QR Payment Service (Colombia)',
-    merchantId: config.merchantId,
-    environment: config.baseUrl.includes('sandbox') ? 'sandbox' : 'production',
+    services: {
+      openpay: {
+        active: true,
+        merchantId: openpayConfig.merchantId,
+        environment: openpayConfig.baseUrl.includes('sandbox') ? 'sandbox' : 'production'
+      },
+      factus_pay: {
+        active: true,
+        email: factusConfig.email,
+        environment: factusConfig.isProduction ? 'production' : 'sandbox',
+        baseUrl: factusConfig.baseUrl
+      }
+    },
     timestamp: new Date().toISOString()
   });
 });
@@ -41,16 +54,15 @@ app.use('/api/*', (req, res) => {
 });
 
 // Iniciar servidor
-const server = app.listen(config.port, () => {
+const server = app.listen(openpayConfig.port, () => {
   console.log('================================================================');
-  console.log('🚀 SERVICIO OPENPAY QR COLOMBIA INICIADO');
-  console.log(`📡 URL Local:        http://localhost:${config.port}`);
-  console.log(`🏦 Merchant ID:      ${config.merchantId}`);
-  console.log(`🌐 Openpay URL:      ${config.baseUrl}`);
-  console.log(`💰 Moneda:           ${config.defaultCurrency}`);
-  console.log(`⏱️  Temporizador QR:  10 minutos (Reglamentario Openpay)`);
+  console.log('🚀 SERVIDOR DE PAGOS QR COLOMBIA (OPENPAY & FACTUS PAY)');
+  console.log(`📡 URL Local:        http://localhost:${openpayConfig.port}`);
+  console.log(`🏦 Openpay Merchant: ${openpayConfig.merchantId} (${openpayConfig.baseUrl})`);
+  console.log(`⚡ Factus Pay:       ${factusConfig.email} (${factusConfig.baseUrl})`);
+  console.log(`💰 Moneda:           ${openpayConfig.defaultCurrency}`);
   console.log('================================================================');
-  console.log(`👉 Prueba la interfaz visual en: http://localhost:${config.port}`);
+  console.log(`👉 Prueba la interfaz visual en: http://localhost:${openpayConfig.port}`);
 });
 
 module.exports = { app, server };
